@@ -2736,11 +2736,11 @@ sr_modinfo_module_data_load(struct sr_mod_info_s *mod_info, struct sr_mod_info_m
         /* fallthrough */
         case SR_DS_RUNNING:
             /* copy all module data */
-            err_info = sr_lyd_get_module_data(&mod_info->conn->run_cache_data, mod->ly_mod, 0, 1, &mod_data);
+            err_info = sr_lyd_get_module_data(&sr_run_cache.data, mod->ly_mod, 0, 1, &mod_data);
             break;
         case SR_DS_OPERATIONAL:
             /* copy only enabled module data */
-            err_info = sr_module_oper_data_get_enabled(conn, &mod_info->conn->run_cache_data, mod, get_oper_opts,
+            err_info = sr_module_oper_data_get_enabled(conn, &sr_run_cache.data, mod, get_oper_opts,
                     1, &mod_data);
             break;
         }
@@ -2983,7 +2983,7 @@ sr_modinfo_data_load(struct sr_mod_info_s *mod_info, int read_only, sr_session_c
     conn = mod_info->conn;
 
     /* CACHE READ LOCK */
-    if ((err_info = sr_rwlock(&conn->run_cache_lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ, conn->cid,
+    if ((err_info = sr_rwlock(&sr_run_cache.lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ, conn->cid,
             __func__, NULL, NULL))) {
         return err_info;
     }
@@ -3004,7 +3004,7 @@ sr_modinfo_data_load(struct sr_mod_info_s *mod_info, int read_only, sr_session_c
                 /* we can use the cache directly only if we are working with the running datastore (as the main datastore)
                  * and not modifying the data */
                 mod_info->data_cached = 1;
-                mod_info->data = conn->run_cache_data;
+                mod_info->data = sr_run_cache.data;
 
                 for (i = 0; i < mod_info->mod_count; ++i) {
                     mod = &mod_info->mods[i];
@@ -3019,7 +3019,7 @@ sr_modinfo_data_load(struct sr_mod_info_s *mod_info, int read_only, sr_session_c
                         continue;
                     }
 
-                    if ((err_info = sr_lyd_get_module_data(&conn->run_cache_data, mod->ly_mod, 0, 1, &mod_info->data))) {
+                    if ((err_info = sr_lyd_get_module_data(&sr_run_cache.data, mod->ly_mod, 0, 1, &mod_info->data))) {
                         goto cleanup;
                     }
 
@@ -3050,7 +3050,7 @@ sr_modinfo_data_load(struct sr_mod_info_s *mod_info, int read_only, sr_session_c
 cleanup:
     if (!mod_info->data_cached) {
         /* CACHE READ UNLOCK */
-        sr_rwunlock(&conn->run_cache_lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ, conn->cid, __func__);
+        sr_rwunlock(&sr_run_cache.lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ, conn->cid, __func__);
     } /* else the flag marks held READ lock */
     return err_info;
 }
@@ -3446,7 +3446,7 @@ sr_modinfo_get_filter(struct sr_mod_info_s *mod_info, const char *xpath, sr_sess
             mod_info->data_cached = 0;
 
             /* CACHE READ UNLOCK */
-            sr_rwunlock(&mod_info->conn->run_cache_lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ,
+            sr_rwunlock(&sr_run_cache.lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ,
                     mod_info->conn->cid, __func__);
         }
 
@@ -4067,7 +4067,7 @@ sr_modinfo_erase(struct sr_mod_info_s *mod_info)
 
     if (mod_info->data_cached) {
         /* CACHE READ UNLOCK */
-        sr_rwunlock(&mod_info->conn->run_cache_lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ,
+        sr_rwunlock(&sr_run_cache.lock, SR_CONN_RUN_CACHE_LOCK_TIMEOUT, SR_LOCK_READ,
                 mod_info->conn->cid, __func__);
     } else {
         lyd_free_siblings(mod_info->data);
