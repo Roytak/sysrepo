@@ -170,7 +170,7 @@ sr_conn_free(sr_conn_ctx_t *conn)
         lyd_free_siblings(sr_schema_mount_ctx.data);
         sr_schema_mount_ctx.data = NULL;
 
-        sr_conn_run_cache_flush(conn);
+        sr_run_cache_flush(&sr_run_cache);
 
         for (i = 0; i < sr_oper_cache.sub_count; ++i) {
             lyd_free_siblings(sr_oper_cache.subs[i].data);
@@ -1548,7 +1548,7 @@ _sr_install_modules(sr_conn_ctx_t *conn, const char *search_dirs, const char *da
     sr_mods = sr_del_mods = NULL;
 
     /* flush the running cache, since it contains pointers to the old context and needs to be updated */
-    sr_conn_run_cache_flush(conn);
+    sr_run_cache_flush(&sr_run_cache);
 
     /* update content ID */
     SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
@@ -1879,7 +1879,7 @@ sr_remove_modules(sr_conn_ctx_t *conn, const char **module_names, int force)
     sr_mods = sr_del_mods = NULL;
 
     /* flush the running cache, since it contains pointers to the old context and needs to be updated */
-    sr_conn_run_cache_flush(conn);
+    sr_run_cache_flush(&sr_run_cache);
 
     /* update content ID */
     SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
@@ -2136,7 +2136,7 @@ sr_update_modules(sr_conn_ctx_t *conn, const char **schema_paths, const char *se
     sr_mods = NULL;
 
     /* flush the running cache, since it contains pointers to the old context and needs to be updated */
-    sr_conn_run_cache_flush(conn);
+    sr_run_cache_flush(&sr_run_cache);
 
     /* update content ID */
     SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
@@ -2654,7 +2654,7 @@ sr_change_module_feature(sr_conn_ctx_t *conn, const char *module_name, const cha
     SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
 
     /* flush the running cache */
-    sr_conn_run_cache_flush(conn);
+    sr_run_cache_flush(&sr_run_cache);
 
     /* print the new context */
     if ((err_info = sr_shmctx_print_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
@@ -7868,8 +7868,8 @@ sr_oper_poll_subscribe(sr_session_ctx_t *session, const char *module_name, const
         goto cleanup_unlock1;
     }
 
-    /* add new cache entry into the connection */
-    if ((err_info = sr_conn_oper_cache_add(conn, sub_id, module_name, path))) {
+    /* add new cache entry */
+    if ((err_info = sr_oper_cache_add(&sr_oper_cache, sub_id, module_name, path))) {
         goto cleanup_unlock2;
     }
 
@@ -7918,7 +7918,7 @@ error2:
     }
 
 error1:
-    sr_conn_oper_cache_del(conn, sub_id);
+    sr_oper_cache_del(&sr_oper_cache, sub_id);
 
 cleanup_unlock2:
     /* SUBS WRITE UNLOCK */
