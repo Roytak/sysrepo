@@ -48,7 +48,6 @@
 #include "plugins_datastore.h"
 #include "plugins_notification.h"
 #include "replay.h"
-#include "shm_ctx.h"
 #include "shm_ext.h"
 #include "shm_main.h"
 #include "shm_mod.h"
@@ -313,7 +312,7 @@ sr_connect(const sr_conn_options_t opts, sr_conn_ctx_t **conn_p)
     /* context was updated */
     if (created) {
         /* this is the first connection on the system, print the context */
-        if ((err_info = sr_shmctx_print_context(&sr_yang_ctx.ly_ctx_shm, sr_yang_ctx.ly_ctx))) {
+        if ((err_info = sr_lycc_store_context(&sr_yang_ctx.ly_ctx_shm, sr_yang_ctx.ly_ctx))) {
             goto cleanup_unlock;
         }
     }
@@ -1581,7 +1580,7 @@ _sr_install_modules(sr_conn_ctx_t *conn, const char *search_dirs, const char *da
     SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
 
     /* print the new context, it will be obtained next time context is locked */
-    if ((err_info = sr_shmctx_print_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
+    if ((err_info = sr_lycc_store_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
         goto error;
     }
 
@@ -1924,7 +1923,7 @@ sr_remove_modules(sr_conn_ctx_t *conn, const char **module_names, int force)
     SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
 
     /* print the new context, it will be obtained next time context is locked */
-    if ((err_info = sr_shmctx_print_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
+    if ((err_info = sr_lycc_store_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
         goto cleanup;
     }
 
@@ -2193,7 +2192,7 @@ sr_update_modules(sr_conn_ctx_t *conn, const char **schema_paths, const char *se
     SR_CONN_MAIN_SHM(conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
 
     /* print the new context, it will be obtained next time context is locked */
-    if ((err_info = sr_shmctx_print_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
+    if ((err_info = sr_lycc_store_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
         goto cleanup;
     }
 
@@ -2732,7 +2731,7 @@ sr_change_module_feature(sr_conn_ctx_t *conn, const char *module_name, const cha
     sr_run_cache_flush(&sr_run_cache);
 
     /* print the new context */
-    if ((err_info = sr_shmctx_print_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
+    if ((err_info = sr_lycc_store_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
         goto cleanup;
     }
 
@@ -4196,7 +4195,7 @@ sr_schema_mount_data_update(sr_session_ctx_t *session)
     SR_CONN_MAIN_SHM(session->conn)->content_id = ly_ctx_get_modules_hash(new_ctx);
 
     /* print the new context - new schema mount data will be obtained next time context is locked */
-    if ((err_info = sr_shmctx_print_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
+    if ((err_info = sr_lycc_store_context(&sr_yang_ctx.ly_ctx_shm, new_ctx))) {
         goto cleanup;
     }
 
