@@ -166,7 +166,7 @@ sr_conn_free(sr_conn_ctx_t *conn)
         /* destroy lyctx */
         sr_yang_ctx.content_id = 0;
         sr_yang_ctx.sm_data_id = 0;
-        ly_ctx_destroy(sr_yang_ctx.ly_ctx);
+        sr_ly_ctx_destroy(sr_yang_ctx.ly_ctx);
         sr_yang_ctx.ly_ctx = NULL;
 
         /* destroy shm */
@@ -1691,7 +1691,7 @@ cleanup:
     }
 
     sr_lycc_clear_data(&cc_info);
-    ly_ctx_destroy(new_ctx);
+    sr_ly_ctx_destroy(new_ctx);
     free(mod_name);
 
     /* CONTEXT UNLOCK */
@@ -1977,7 +1977,7 @@ sr_remove_modules(sr_conn_ctx_t *conn, const char **module_names, int force)
 cleanup:
     sr_lycc_clear_data(&cc_info);
     lyd_free_siblings(sr_del_mods);
-    ly_ctx_destroy(new_ctx);
+    sr_ly_ctx_destroy(new_ctx);
 
     /* CONTEXT UNLOCK */
     sr_lycc_unlock(conn, ctx_mode, 1, __func__);
@@ -2209,7 +2209,7 @@ sr_update_modules(sr_conn_ctx_t *conn, const char **schema_paths, const char *se
 
 cleanup:
     sr_lycc_clear_data(&cc_info);
-    ly_ctx_destroy(new_ctx);
+    sr_ly_ctx_destroy(new_ctx);
 
     /* CONTEXT UNLOCK */
     sr_lycc_unlock(conn, ctx_mode, 1, __func__);
@@ -2269,7 +2269,8 @@ cleanup:
 }
 
 API int
-sr_get_module_replay_support(sr_conn_ctx_t *conn, const char *module_name, struct timespec *earliest_notif, int *enabled)
+sr_get_module_replay_support(sr_conn_ctx_t *conn, const char *module_name, const struct timespec *after,
+        struct timespec *earliest_notif, struct timespec *replay_start, int *enabled)
 {
     sr_error_info_t *err_info = NULL;
     sr_mod_t *shm_mod;
@@ -2293,7 +2294,7 @@ sr_get_module_replay_support(sr_conn_ctx_t *conn, const char *module_name, struc
     /* read replay support */
     *enabled = shm_mod->replay_supp;
 
-    if (earliest_notif) {
+    if (earliest_notif || replay_start) {
         /* find LY module */
         ly_mod = ly_ctx_get_module_implemented(sr_yang_ctx.ly_ctx, module_name);
         assert(ly_mod);
@@ -2303,9 +2304,17 @@ sr_get_module_replay_support(sr_conn_ctx_t *conn, const char *module_name, struc
             goto cleanup;
         }
 
-        /* get earliest notif timestamp */
-        if ((err_info = ntf_handle->plugin->earliest_get_cb(ly_mod, earliest_notif))) {
-            goto cleanup;
+        if (earliest_notif) {
+            /* get earliest notif timestamp */
+            if ((err_info = ntf_handle->plugin->earliest_get_cb(ly_mod, after, earliest_notif))) {
+                goto cleanup;
+            }
+        }
+        if (replay_start) {
+            /* get replay start timestamp */
+            if ((err_info = ntf_handle->plugin->replay_start_get_cb(ly_mod, replay_start))) {
+                goto cleanup;
+            }
         }
     }
 
@@ -2750,7 +2759,7 @@ sr_change_module_feature(sr_conn_ctx_t *conn, const char *module_name, const cha
 cleanup:
     free(features);
     sr_lycc_clear_data(&cc_info);
-    ly_ctx_destroy(new_ctx);
+    sr_ly_ctx_destroy(new_ctx);
 
     /* CONTEXT UNLOCK */
     sr_lycc_unlock(conn, ctx_mode, 1, __func__);

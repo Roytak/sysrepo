@@ -360,7 +360,7 @@ srctl_list_collect(sr_conn_ctx_t *conn, const struct ly_ctx *ly_ctx, struct list
         /* replay-support */
         enabled = 0;
         if (ly_mod->implemented) {
-            ret = sr_get_module_replay_support(conn, ly_mod->name, NULL, &enabled);
+            ret = sr_get_module_replay_support(conn, ly_mod->name, NULL, NULL, NULL, &enabled);
             if (ret != SR_ERR_OK) {
                 goto cleanup;
             }
