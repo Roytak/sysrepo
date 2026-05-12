@@ -308,6 +308,7 @@ module ietf-subscribed-notifications {
   /* Identities for encodings */
 
   identity configurable-encoding {
+    base transport;
     description
       "If a transport identity derives from this identity, it means
        that it supports configurable encodings.  An example of a
